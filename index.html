@@ -169,7 +169,11 @@
                         properties: {
                             title: d.NAME,
                             address: d.ADDRESS,
-                            category: d.CATEGORY
+                            category: d.CATEGORY,
+                            quote: d.QUOTE,
+                            city: d.CITY,
+                            country: d.COUNTRY
+
                         }
                     };
                 });
@@ -202,12 +206,10 @@
 
             // Generate match expression dynamically
             const matchExpression = ['match', ['get', 'category']];
-
             // Add each category and its color to the match expression
             Object.entries(categoryStyles).forEach(([category, style]) => {
                 matchExpression.push(category, style.color);
             });
-
             // Add default color at the end
             matchExpression.push('#B42222');
 
@@ -229,11 +231,17 @@
 
             map.on('click', 'points', (e) => {
                 const coordinates = e.features[0].geometry.coordinates.slice();
-                const { title, address } = e.features[0].properties;
+                const { title, address, city, country, quote } = e.features[0].properties;
+
+                const categories = e.features[0].properties.category
 
                 new mapboxgl.Popup()
                     .setLngLat(coordinates)
-                    .setHTML(`<h3>${title}</h3><p>${address}</p>
+                    .setHTML(`<h3>${title}</h3>
+                    
+                    <strong>${quote}</strong>
+                    <p>${address}, ${city}, ${country}</p>
+                    <p>${categories}</p>
                     <img src="https://lh3.googleusercontent.com/p/AF1QipMMLA-6bKFTwRGw3Q-7OzWaORzzCQg8X3As_Vwt=s1360-w1360-h1020">
                     `)
                     .addTo(map);
