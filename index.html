@@ -63,9 +63,20 @@
 
     <script>
 
+        const categoryStyles = {
+            'Accomondations': { displayName: 'Accomondations', color: '#ff0000' },
+            'Art & Design': { displayName: 'Art & Design', color: '#ffa500' },
+            'Entertainment': { displayName: 'Entertainment', color: '#ffff00' },
+            'Food & Drink': { displayName: 'Food & Drink', color: '#008000' },
+            'History & Culture': { displayName: 'History & Culture', color: '#0000ff' },
+            'Nature & Outdoors': { displayName: 'Nature & Outdoors', color: '#800080' },
+            'Wellness & Fitness': { displayName: 'Wellness & Fitness', color: '#ffc0cb' }
+        };
+
         const appData = {
             filters: [],
-            points: []
+            points: [],
+            selectedFilters: Object.keys(categoryStyles ?? {})
         }
         mapboxgl.accessToken = 'pk.eyJ1Ijoic2VyaHV6IiwiYSI6ImNseXpvc3RlczJpbnIya3FscDU2aHc5d3EifQ.FHtPjde_lqensSHZxqthgw';
 
@@ -84,15 +95,25 @@
             map.setPaintProperty('admin-0-boundary', 'line-color', '#6a61b5');
         });
 
-        const categoryStyles = {
-            'Accommodations': { displayName: 'Accommodations', color: '#ff0000' },
-            'Art & Design': { displayName: 'Art & Design', color: '#ffa500' },
-            'Entertainment': { displayName: 'Entertainment', color: '#ffff00' },
-            'Food & Drink': { displayName: 'Food & Drink', color: '#008000' },
-            'History & Culture': { displayName: 'History & Culture', color: '#0000ff' },
-            'Nature & Outdoors': { displayName: 'Nature & Outdoors', color: '#800080' },
-            'Wellness & Fitness': { displayName: 'Wellness & Fitness', color: '#ffc0cb' }
-        };
+        // Function to update map points based on checked filters
+        function updateMapFilters() {
+
+            const filtered = appData.points.filter(p => {
+                const categories = p.properties.category.split(',').map(c => c.trim());
+                console.log('categories', categories);
+                const filtered = appData.selectedFilters.some(f => categories.includes(f));
+                return filtered;
+            });
+
+            console.log('filtered', filtered);
+
+            if (map.getSource('points')) {
+                map.getSource('points').setData({ type: 'FeatureCollection', features: filtered });
+            }
+        }
+
+        // Initialize selectedFilters with all category keys
+        appData.selectedFilters = Object.keys(categoryStyles);
 
         // Generate filter checkboxes dynamically
         const filtersContainer = document.getElementById('filters');
@@ -109,11 +130,21 @@
             checkbox.type = 'checkbox';
             checkbox.value = category;
             checkbox.checked = true;
+            // Update event listener to modify selectedFilters array
+            checkbox.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    if (!appData.selectedFilters.includes(category)) {
+                        appData.selectedFilters.push(category);
+                    }
+                } else {
+                    appData.selectedFilters = appData.selectedFilters.filter(filter => filter !== category);
+                }
+                updateMapFilters();
+            });
             label.appendChild(checkbox);
 
             label.appendChild(document.createTextNode(' ' + style.displayName));
             filtersContainer.appendChild(label);
-
         });
 
         d3.csv("https://docs.google.com/spreadsheets/d/e/2PACX-1vT24a3O-v05xHAQ1rxRH-0Ikr9qy55kMmsbsnW-kwd96qUMO2rVMAIj6se7zJcE-_JGu56TEmlpFi4f/pub?output=csv")
@@ -151,11 +182,10 @@
                 //     padding: 40
                 // });
 
-                map.getSource('points').setData({
-                    type: 'FeatureCollection',
-                    features: points
-                });
-
+                if (map.getSource('points')) {
+                    // Apply initial filters after data is loaded
+                    updateMapFilters();
+                }
             });
 
 
@@ -193,13 +223,9 @@
                 }
             });
 
-            document.querySelectorAll('#filters input[type=checkbox]').forEach((cb) => {
-                cb.addEventListener('change', () => {
-                    const checked = [...document.querySelectorAll('#filters input[type=checkbox]:checked')].map(x => x.value);
-                    const filtered = appData.points.filter(p => checked.includes(p.properties.category));
-                    map.getSource('points').setData({ type: 'FeatureCollection', features: filtered });
-                });
-            });
+            // Event handlers for checkbox filters have been moved to checkbox creation
+            // Apply initial filters
+            updateMapFilters();
 
             map.on('click', 'points', (e) => {
                 const coordinates = e.features[0].geometry.coordinates.slice();
@@ -208,7 +234,7 @@
                 new mapboxgl.Popup()
                     .setLngLat(coordinates)
                     .setHTML(`<h3>${title}</h3><p>${address}</p>
-                    <img src="https://live.staticflickr.com/65535/54394828978_f9966eb81b_c.jpg">
+                    <img src="https://lh3.googleusercontent.com/p/AF1QipMMLA-6bKFTwRGw3Q-7OzWaORzzCQg8X3As_Vwt=s1360-w1360-h1020">
                     `)
                     .addTo(map);
             });
