@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Map</title>
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+    <link href="https://api.mapbox.com/mapbox-gl-js/v3.10.0/mapbox-gl.css" rel="stylesheet">
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.10.0/mapbox-gl.js"></script>
+
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        #map {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 100%;
+        }
+
+        #filters {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #fff7e7;
+            padding: 15px;
+            border-radius: 4px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        #filters label {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-family: Arial, sans-serif;
+        }
+
+        #filters .color-indicator {
+            width: 12px;
+            height: 12px;
+            display: inline-block;
+            margin-right: 8px;
+            border-radius: 50%;
+            border: 2px solid white;
+        }
+
+        .filter-label {
+            cursor: pointer;
+            user-select: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="map"></div>
+    <div id="filters"></div>
+
+    <script>
+
+        const appData = {
+            filters: [],
+            points: []
+        }
+        mapboxgl.accessToken = 'pk.eyJ1Ijoic2VyaHV6IiwiYSI6ImNseXpvc3RlczJpbnIya3FscDU2aHc5d3EifQ.FHtPjde_lqensSHZxqthgw';
+
+        const map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/mapbox/light-v11',
+            center: [0, 0],
+            zoom: 2,
+            projection: 'mercator'
+        });
+
+        // Set style properties as soon as the style loads
+        map.on('style.load', () => {
+            map.setPaintProperty('land', 'background-color', '#fff7e7');
+            map.setPaintProperty('admin-1-boundary', 'line-color', '#6a61b5');
+            map.setPaintProperty('admin-0-boundary', 'line-color', '#6a61b5');
+        });
+
+        const categoryStyles = {
+            'Accommodations': { displayName: 'Accommodations', color: '#ff0000' },
+            'Art & Design': { displayName: 'Art & Design', color: '#ffa500' },
+            'Entertainment': { displayName: 'Entertainment', color: '#ffff00' },
+            'Food & Drink': { displayName: 'Food & Drink', color: '#008000' },
+            'History & Culture': { displayName: 'History & Culture', color: '#0000ff' },
+            'Nature & Outdoors': { displayName: 'Nature & Outdoors', color: '#800080' },
+            'Wellness & Fitness': { displayName: 'Wellness & Fitness', color: '#ffc0cb' }
+        };
+
+        // Generate filter checkboxes dynamically
+        const filtersContainer = document.getElementById('filters');
+        Object.entries(categoryStyles).forEach(([category, style]) => {
+            const label = document.createElement('label');
+            label.className = 'filter-label';
+
+            const colorIndicator = document.createElement('span');
+            colorIndicator.className = 'color-indicator';
+            colorIndicator.style.backgroundColor = style.color;
+            label.appendChild(colorIndicator);
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.value = category;
+            checkbox.checked = true;
+            label.appendChild(checkbox);
+
+            label.appendChild(document.createTextNode(' ' + style.displayName));
+            filtersContainer.appendChild(label);
+
+        });
+
+        d3.csv("https://docs.google.com/spreadsheets/d/e/2PACX-1vT24a3O-v05xHAQ1rxRH-0Ikr9qy55kMmsbsnW-kwd96qUMO2rVMAIj6se7zJcE-_JGu56TEmlpFi4f/pub?output=csv")
+            .then(function (data) {
+                console.log(data);
+
+                const bounds = new mapboxgl.LngLatBounds();
+                const filters = []
+
+                const points = data.map(function (d) {
+
+                    const [lat, lng] = d['COORDINATES'].split(',').map(Number);
+                    filters.push(d['CATEGORY']);
+                    bounds.extend([lng, lat]);
+
+                    return {
+                        type: 'Feature',
+                        geometry: {
+                            type: 'Point',
+                            coordinates: [lng, lat]
+                        },
+                        properties: {
+                            title: d.NAME,
+                            address: d.ADDRESS,
+                            category: d.CATEGORY
+                        }
+                    };
+                });
+
+                console.log('points', points);
+                appData.points = points;
+                appData.filters = [...new Set(filters)];
+
+                // map.fitBounds(bounds, {
+                //     padding: 40
+                // });
+
+                map.getSource('points').setData({
+                    type: 'FeatureCollection',
+                    features: points
+                });
+
+            });
+
+
+        map.on('load', () => {
+            // The style paint properties have been moved to style.load event
+
+            map.addSource('points', {
+                type: 'geojson',
+                data: {
+                    type: 'FeatureCollection',
+                    features: appData.points
+                }
+            });
+
+            // Generate match expression dynamically
+            const matchExpression = ['match', ['get', 'category']];
+
+            // Add each category and its color to the match expression
+            Object.entries(categoryStyles).forEach(([category, style]) => {
+                matchExpression.push(category, style.color);
+            });
+
+            // Add default color at the end
+            matchExpression.push('#B42222');
+
+            map.addLayer({
+                id: 'points',
+                source: 'points',
+                type: 'circle',
+                paint: {
+                    'circle-radius': 6,
+                    'circle-color': matchExpression,
+                    'circle-stroke-width': 2,
+                    'circle-stroke-color': '#fff'
+                }
+            });
+
+            document.querySelectorAll('#filters input[type=checkbox]').forEach((cb) => {
+                cb.addEventListener('change', () => {
+                    const checked = [...document.querySelectorAll('#filters input[type=checkbox]:checked')].map(x => x.value);
+                    const filtered = appData.points.filter(p => checked.includes(p.properties.category));
+                    map.getSource('points').setData({ type: 'FeatureCollection', features: filtered });
+                });
+            });
+
+            map.on('click', 'points', (e) => {
+                const coordinates = e.features[0].geometry.coordinates.slice();
+                const { title, address } = e.features[0].properties;
+
+                new mapboxgl.Popup()
+                    .setLngLat(coordinates)
+                    .setHTML(`<h3>${title}</h3><p>${address}</p>
+                    <img src="https://live.staticflickr.com/65535/54394828978_f9966eb81b_c.jpg">
+                    `)
+                    .addTo(map);
+            });
+
+            map.on('mouseenter', 'points', () => {
+                map.getCanvas().style.cursor = 'pointer';
+            });
+
+            map.on('mouseleave', 'points', () => {
+                map.getCanvas().style.cursor = '';
+            });
+
+        })
+
+    </script>
+
+</body>
+
+</html>
