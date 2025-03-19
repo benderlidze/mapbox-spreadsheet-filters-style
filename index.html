@@ -147,7 +147,7 @@
             filtersContainer.appendChild(label);
         });
 
-        d3.csv("https://docs.google.com/spreadsheets/d/e/2PACX-1vT24a3O-v05xHAQ1rxRH-0Ikr9qy55kMmsbsnW-kwd96qUMO2rVMAIj6se7zJcE-_JGu56TEmlpFi4f/pub?output=csv")
+        d3.csv("https://docs.google.com/spreadsheets/d/e/2PACX-1vQbKJ4BhctoIn6xEi22geBvVpmgZEzq6TEdzDZtc2Dgo0L2IJIW7Gy3j-EEoDZ3gFD8VemQhPs4Dc85/pub?output=csv")
             .then(function (data) {
                 console.log(data);
 
@@ -172,7 +172,8 @@
                             category: d.CATEGORY,
                             quote: d.QUOTE,
                             city: d.CITY,
-                            country: d.COUNTRY
+                            country: d.COUNTRY,
+                            image: d.LINK
 
                         }
                     };
@@ -231,7 +232,7 @@
 
             map.on('click', 'points', (e) => {
                 const coordinates = e.features[0].geometry.coordinates.slice();
-                const { title, address, city, country, quote } = e.features[0].properties;
+                const { title, address, city, country, quote, image } = e.features[0].properties;
 
                 const categories = e.features[0].properties.category
 
@@ -242,9 +243,9 @@
                     <strong>${quote}</strong>
                     <p>${address}, ${city}, ${country}</p>
                     <p>${categories}</p>
+                    <img src="${image}" style="max-width:220px;">
                     `)
                     .addTo(map);
-                    // <img src="https://lh3.googleusercontent.com/p/AF1QipMMLA-6bKFTwRGw3Q-7OzWaORzzCQg8X3As_Vwt=s1360-w1360-h1020">
             });
 
             map.on('mouseenter', 'points', () => {
