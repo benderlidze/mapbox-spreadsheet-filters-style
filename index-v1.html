@@ -13,6 +13,7 @@
         body {
             margin: 0;
             padding: 0;
+            font-family: 'Open Sans', sans-serif;
         }
 
         #map {
@@ -129,13 +130,14 @@
     <script>
 
         const categoryStyles = {
-            'Accomondations': { displayName: 'Accomondations', color: '#ff0000' },
-            'Art & Design': { displayName: 'Art & Design', color: '#ffa500' },
+            'Hotels': { displayName: 'Hotels', color: '#ff0000' },
             'Entertainment': { displayName: 'Entertainment', color: '#ffff00' },
-            'Food & Drink': { displayName: 'Food & Drink', color: '#008000' },
-            'History & Culture': { displayName: 'History & Culture', color: '#0000ff' },
-            'Nature & Outdoors': { displayName: 'Nature & Outdoors', color: '#800080' },
-            'Wellness & Fitness': { displayName: 'Wellness & Fitness', color: '#ffc0cb' }
+            'Restaurants': { displayName: 'Restaurants', color: '#008000' },
+            'Culture': { displayName: 'Culture', color: '#0000ff' },
+            'Shopping': { displayName: 'Shopping', color: '#800080' },
+
+            // 'Art & Design': { displayName: 'Art & Design', color: '#ffa500' },
+            // 'Wellness & Fitness': { displayName: 'Wellness & Fitness', color: '#ffc0cb' }
         };
 
         const appData = {
@@ -333,7 +335,9 @@
                             city: d.CITY,
                             country: d.COUNTRY,
                             image: d['PHOTO LINK'],
-                            region: d.REGION
+                            region: d.REGION,
+                            source: d.SOURCE,
+                            sourceLink: d['SOURCE LINK']
 
                         }
                     };
@@ -390,9 +394,12 @@
 
             map.on('click', 'points', (e) => {
                 const coordinates = e.features[0].geometry.coordinates.slice();
-                const { title, address, city, country, quote, image } = e.features[0].properties;
+                const { title, address, city, country, quote, image, source, sourceLink } = e.features[0].properties;
 
                 const categories = e.features[0].properties.category
+
+
+                const sourceLinkHtml = sourceLink ? `<a href="${sourceLink}" target="_blank">${source}</a>` : '';
 
                 new mapboxgl.Popup()
                     .setLngLat(coordinates)
@@ -404,10 +411,11 @@
                     </div>
                     <strong>${categories}</strong>
                     <div>${quote}</div>
-                    <p>${address}, ${city}, ${country}</p>
+                    <p>${sourceLinkHtml}</p>
                     
                     `)
                     .addTo(map);
+                // <p>${address}, ${city}, ${country}</p>
             });
 
             map.on('mouseenter', 'points', () => {
