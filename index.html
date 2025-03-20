@@ -54,6 +54,47 @@
             cursor: pointer;
             user-select: none;
         }
+
+        .info-title {
+            display: flex;
+            align-content: center;
+            flex-direction: row;
+            align-items: center;
+            justify-content: flex-start;
+            margin-bottom: 10px;
+        }
+
+        .marker-container {
+            display: flex;
+            align-items: center;
+
+        }
+
+        .marker {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: white;
+            border: 3px solid rgba(255, 255, 255, 0.8);
+            z-index: 10;
+            box-shadow: 0 0 10px rgba(237, 2, 2, 0.68);
+        }
+
+        .marker-label {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-family: Arial;
+            font-size: 12px;
+            white-space: nowrap;
+
+            max-height: fit-content;
+            margin-left: -10px;
+            text-indent: 5px;
+
+
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.25);
+        }
     </style>
 </head>
 
@@ -93,6 +134,14 @@
             map.setPaintProperty('land', 'background-color', '#fff7e7');
             map.setPaintProperty('admin-1-boundary', 'line-color', '#6a61b5');
             map.setPaintProperty('admin-0-boundary', 'line-color', '#6a61b5');
+
+            // Set all label layers to black
+            const layers = map.getStyle().layers;
+            for (const layer of layers) {
+                if (layer.id.includes('-label')) {
+                    map.setPaintProperty(layer.id, 'text-color', '#000000');
+                }
+            }
         });
 
         // Function to update map points based on checked filters
@@ -117,6 +166,12 @@
 
         // Generate filter checkboxes dynamically
         const filtersContainer = document.getElementById('filters');
+
+        const img = document.createElement('img');
+        img.src = 'logo.png';
+        img.style = 'width: 250px;padding:10px;';
+        filtersContainer.appendChild(img);
+
         Object.entries(categoryStyles).forEach(([category, style]) => {
             const label = document.createElement('label');
             label.className = 'filter-label';
@@ -144,6 +199,8 @@
             label.appendChild(checkbox);
 
             label.appendChild(document.createTextNode(' ' + style.displayName));
+
+
             filtersContainer.appendChild(label);
         });
 
@@ -160,6 +217,41 @@
                     filters.push(d['CATEGORY']);
                     bounds.extend([lng, lat]);
 
+
+
+
+                    // const container = document.createElement('div');
+                    // container.className = 'marker-container';
+
+                    // const marker = document.createElement('div');
+                    // marker.className = 'marker';
+
+                    // const img = document.createElement('img');
+                    // img.src = 'img.jpg';
+                    // img.style.width = '100%';
+                    // img.style.height = '100%';
+                    // img.style.borderRadius = '50%';
+                    // img.style.objectFit = 'cover';
+                    // marker.appendChild(img);
+
+                    // const label = document.createElement('div');
+                    // label.className = 'marker-label';
+                    // label.textContent = d.NAME;
+
+                    // container.appendChild(marker);
+                    // container.appendChild(label);
+
+                    // new mapboxgl.Marker({
+                    //     element: container,
+                    //     anchor: 'center'
+                    // })
+                    //     .setLngLat([lng, lat])
+                    //     .addTo(map);
+
+
+
+
+
                     return {
                         type: 'Feature',
                         geometry: {
@@ -173,7 +265,7 @@
                             quote: d.QUOTE,
                             city: d.CITY,
                             country: d.COUNTRY,
-                            image: d.LINK
+                            image: d['PHOTO LINK']
 
                         }
                     };
@@ -191,6 +283,8 @@
                     // Apply initial filters after data is loaded
                     updateMapFilters();
                 }
+
+
             });
 
 
@@ -238,12 +332,16 @@
 
                 new mapboxgl.Popup()
                     .setLngLat(coordinates)
-                    .setHTML(`<h3>${title}</h3>
+                    .setHTML(`
                     
-                    <strong>${quote}</strong>
+                    <div class="info-title">
+                        <img src="${image}" style="max-width:60px;border-radius:100%; margin-right:10px;">
+                        <h3>${title}</h3>
+                    </div>
+                    <strong>${categories}</strong>
+                    <div>${quote}</div>
                     <p>${address}, ${city}, ${country}</p>
-                    <p>${categories}</p>
-                    <img src="${image}" style="max-width:220px;">
+                    
                     `)
                     .addTo(map);
             });
