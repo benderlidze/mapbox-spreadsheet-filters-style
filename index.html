@@ -22,10 +22,18 @@
             width: 100%;
         }
 
-        #filters {
+        .filter-container {
             position: absolute;
             top: 10px;
             right: 10px;
+            z-index: 1;
+
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        #filters {
             background: #fff7e7;
             padding: 15px;
             border-radius: 4px;
@@ -92,15 +100,31 @@
             margin-left: -10px;
             text-indent: 5px;
 
-
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.25);
+        }
+
+        .fileter-container {
+            background: #fff7e7;
+            padding: 15px;
+            border-radius: 4px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            max-height: 80vh;
+            overflow-y: auto;
+
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
         }
     </style>
 </head>
 
 <body>
     <div id="map"></div>
-    <div id="filters"></div>
+
+    <div class="filter-container">
+        <div id="filters"></div>
+        <div id="regions" class="fileter-container"></div>
+    </div>
 
     <script>
 
@@ -117,7 +141,9 @@
         const appData = {
             filters: [],
             points: [],
-            selectedFilters: Object.keys(categoryStyles ?? {})
+            selectedFilters: Object.keys(categoryStyles ?? {}),
+            selectedRegions: [],
+            regions: []
         }
         mapboxgl.accessToken = 'pk.eyJ1Ijoic2VyaHV6IiwiYSI6ImNseXpvc3RlczJpbnIya3FscDU2aHc5d3EifQ.FHtPjde_lqensSHZxqthgw';
 
@@ -147,12 +173,18 @@
         // Function to update map points based on checked filters
         function updateMapFilters() {
 
-            const filtered = appData.points.filter(p => {
-                const categories = p.properties.category.split(',').map(c => c.trim());
-                console.log('categories', categories);
-                const filtered = appData.selectedFilters.some(f => categories.includes(f));
-                return filtered;
-            });
+            const filtered = appData.points
+                .filter(p => {
+                    const categories = p.properties.category.split(',').map(c => c.trim());
+                    const filtered = appData.selectedFilters.some(f => categories.includes(f));
+                    return filtered;
+                })
+                .filter(p => {
+                    // Filter by selected regions
+                    const region = p.properties.region
+                    const filtered = appData.selectedRegions.includes(region);
+                    return filtered;
+                });
 
             console.log('filtered', filtered);
 
@@ -169,7 +201,7 @@
 
         const img = document.createElement('img');
         img.src = 'logo.png';
-        img.style = 'width: 250px;padding:10px;';
+        img.style = 'width: 150px;padding:10px;';
         filtersContainer.appendChild(img);
 
         Object.entries(categoryStyles).forEach(([category, style]) => {
@@ -197,12 +229,43 @@
                 updateMapFilters();
             });
             label.appendChild(checkbox);
-
             label.appendChild(document.createTextNode(' ' + style.displayName));
-
 
             filtersContainer.appendChild(label);
         });
+
+        function buildRegions() {
+            const regionsContainer = document.getElementById('regions');
+            const regions = appData.regions;
+
+            regions.forEach(region => {
+                const label = document.createElement('label');
+                label.className = 'filter-label';
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.value = region;
+                checkbox.checked = true;
+                // Update event listener to modify selectedFilters array
+                checkbox.addEventListener('change', (e) => {
+                    console.log('region', region);
+                    if (e.target.checked) {
+                        if (!appData.selectedRegions.includes(region)) {
+                            appData.selectedRegions.push(region);
+                        }
+                    } else {
+                        appData.selectedRegions = appData.selectedRegions.filter(filter => filter !== region);
+                    }
+                    updateMapFilters();
+                });
+                label.appendChild(checkbox);
+                label.appendChild(document.createTextNode(' ' + region));
+
+                regionsContainer.appendChild(label);
+            });
+
+            console.log('build regions ',);
+        }
 
         d3.csv("https://docs.google.com/spreadsheets/d/e/2PACX-1vQbKJ4BhctoIn6xEi22geBvVpmgZEzq6TEdzDZtc2Dgo0L2IJIW7Gy3j-EEoDZ3gFD8VemQhPs4Dc85/pub?output=csv")
             .then(function (data) {
@@ -210,6 +273,7 @@
 
                 const bounds = new mapboxgl.LngLatBounds();
                 const filters = []
+                const regions = []
 
                 const points = data.map(function (d) {
 
@@ -217,8 +281,7 @@
                     filters.push(d['CATEGORY']);
                     bounds.extend([lng, lat]);
 
-
-
+                    regions.push(d['REGION']);
 
                     // const container = document.createElement('div');
                     // container.className = 'marker-container';
@@ -248,10 +311,6 @@
                     //     .setLngLat([lng, lat])
                     //     .addTo(map);
 
-
-
-
-
                     return {
                         type: 'Feature',
                         geometry: {
@@ -265,7 +324,8 @@
                             quote: d.QUOTE,
                             city: d.CITY,
                             country: d.COUNTRY,
-                            image: d['PHOTO LINK']
+                            image: d['PHOTO LINK'],
+                            region: d.REGION
 
                         }
                     };
@@ -274,14 +334,13 @@
                 console.log('points', points);
                 appData.points = points;
                 appData.filters = [...new Set(filters)];
+                appData.regions = [...new Set(regions)];
 
-                // map.fitBounds(bounds, {
-                //     padding: 40
-                // });
+                buildRegions()
 
                 if (map.getSource('points')) {
-                    // Apply initial filters after data is loaded
-                    updateMapFilters();
+                    map.getSource('points').setData({ type: 'FeatureCollection', features: points });
+                    // updateMapFilters();
                 }
 
 
@@ -320,9 +379,6 @@
                 }
             });
 
-            // Event handlers for checkbox filters have been moved to checkbox creation
-            // Apply initial filters
-            updateMapFilters();
 
             map.on('click', 'points', (e) => {
                 const coordinates = e.features[0].geometry.coordinates.slice();
