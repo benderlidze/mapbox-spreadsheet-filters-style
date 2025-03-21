@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Map</title>
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+    <link href="https://api.mapbox.com/mapbox-gl-js/v3.10.0/mapbox-gl.css" rel="stylesheet">
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.10.0/mapbox-gl.js"></script>
+
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Open Sans', sans-serif;
+        }
+
+        #map {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 100%;
+        }
+
+        .filter-container {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1;
+
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        #filters {
+            background: #fff7e7;
+            padding: 15px;
+            border-radius: 4px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        #filters label {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-family: Arial, sans-serif;
+        }
+
+        #filters .color-indicator {
+            width: 12px;
+            height: 12px;
+            display: inline-block;
+            margin-right: 8px;
+            border-radius: 50%;
+            border: 2px solid white;
+        }
+
+        .filter-label {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .info-title {
+            display: flex;
+            align-content: center;
+            flex-direction: row;
+            align-items: center;
+            justify-content: flex-start;
+            margin-bottom: 10px;
+        }
+
+        .marker-container {
+            display: flex;
+            align-items: center;
+
+        }
+
+        .marker {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: white;
+            border: 3px solid rgba(255, 255, 255, 0.8);
+            z-index: 10;
+            box-shadow: 0 0 10px rgba(237, 2, 2, 0.68);
+        }
+
+        .marker-label {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-family: Arial;
+            font-size: 12px;
+            white-space: nowrap;
+
+            max-height: fit-content;
+            margin-left: -10px;
+            text-indent: 5px;
+
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.25);
+        }
+
+        .fileter-container {
+            background: #fff7e7;
+            padding: 15px;
+            border-radius: 4px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            max-height: 80vh;
+            overflow-y: auto;
+
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="map"></div>
+
+    <div class="filter-container">
+        <div id="filters"></div>
+        <div id="regions" class="fileter-container" style="display:none"></div>
+    </div>
+
+    <script>
+
+        // const categoryStyles = {
+        //     'Culture': { displayName: 'Culture', color: '#0000ff' },
+        //     'Experiences': { displayName: 'Experiences', color: '#ffff00' },
+        //     'Restaurants': { displayName: 'Restaurants', color: '#008000' },
+        //     'Hotels': { displayName: 'Hotels', color: '#ff0000' },
+        //     'Nature': { displayName: 'Nature', color: '#800080' },
+        //     'Wellness': { displayName: 'Wellness', color: '#800080' },
+
+        //     // 'Art & Design': { displayName: 'Art & Design', color: '#ffa500' },
+        //     // 'Wellness & Fitness': { displayName: 'Wellness & Fitness', color: '#ffc0cb' }
+        // };
+
+        const appData = {
+            filters: [],
+            points: [],
+            selectedFilters: [],
+            selectedRegions: [],
+            regions: []
+        }
+        mapboxgl.accessToken = 'pk.eyJ1Ijoic2VyaHV6IiwiYSI6ImNseXpvc3RlczJpbnIya3FscDU2aHc5d3EifQ.FHtPjde_lqensSHZxqthgw';
+
+        const map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/mapbox/light-v11',
+            center: [0, 0],
+            zoom: 2,
+            projection: 'mercator'
+        });
+
+        // Set style properties as soon as the style loads
+        map.on('style.load', () => {
+            map.setPaintProperty('land', 'background-color', '#fff7e7');
+            map.setPaintProperty('admin-1-boundary', 'line-color', '#6a61b5');
+            map.setPaintProperty('admin-0-boundary', 'line-color', '#6a61b5');
+
+            // Set all label layers to black
+            const layers = map.getStyle().layers;
+            for (const layer of layers) {
+                if (layer.id.includes('-label')) {
+                    map.setPaintProperty(layer.id, 'text-color', '#000000');
+                }
+            }
+        });
+
+        // Function to update map points based on checked filters
+        function updateMapFilters() {
+
+            const filtered = appData.points
+                .filter(p => {
+                    console.log('p', p);
+                    const category = p.properties.category
+                    const filtered = appData.selectedFilters.includes(category);
+                    console.log('category', category);
+                    console.log('selectedFilters', appData.selectedFilters);
+                    return filtered;
+                })
+            // .filter(p => {
+            //     // Filter by selected regions
+            //     const region = p.properties.region
+            //     console.log('region', region);
+            //     const filtered = appData.selectedRegions.includes(region);
+            //     return filtered;
+            // });
+
+            console.log('filtered', filtered);
+
+            if (map.getSource('points')) {
+                map.getSource('points').setData({ type: 'FeatureCollection', features: filtered });
+            }
+        }
+
+
+        // Generate filter checkboxes dynamically
+        const filtersContainer = document.getElementById('filters');
+
+        const img = document.createElement('img');
+        img.src = 'logo.png';
+        img.style = 'width: 110px;padding:10px;';
+        filtersContainer.appendChild(img);
+
+
+        function buildRegions() {
+            const regionsContainer = document.getElementById('regions');
+            const regions = appData.regions;
+
+            regions.forEach(region => {
+                const label = document.createElement('label');
+                label.className = 'filter-label';
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.value = region;
+                checkbox.checked = true;
+                // Update event listener to modify selectedFilters array
+                checkbox.addEventListener('change', (e) => {
+                    console.log('region', region);
+                    console.log('appData.selectedRegions', appData.selectedRegions);
+
+                    if (e.target.checked) {
+                        if (!appData.selectedRegions.includes(region)) {
+                            appData.selectedRegions.push(region);
+                        }
+                    } else {
+                        appData.selectedRegions = appData.selectedRegions.filter(filter => filter !== region);
+                    }
+                    updateMapFilters();
+                });
+                label.appendChild(checkbox);
+                label.appendChild(document.createTextNode(' ' + region));
+
+                regionsContainer.appendChild(label);
+
+                appData.selectedRegions.push(region);
+            });
+
+            console.log('build regions ',);
+        }
+
+        function buildFilters() {
+            const filtersContainer = document.getElementById('filters');
+            const filters = appData.filters;
+
+            filters.forEach(filter => {
+                const label = document.createElement('label');
+                label.className = 'filter-label';
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.value = filter;
+                checkbox.checked = true;
+                // Update event listener to modify selectedFilters array
+                checkbox.addEventListener('change', (e) => {
+
+                    if (e.target.checked) {
+                        if (!appData.selectedFilters.includes(filter)) {
+                            appData.selectedFilters.push(filter);
+                        }
+                    } else {
+                        appData.selectedFilters = appData.selectedFilters.filter(_filter => _filter !== filter);
+
+                    }
+                    updateMapFilters();
+                });
+                label.appendChild(checkbox);
+                label.appendChild(document.createTextNode(' ' + filter));
+
+                filtersContainer.appendChild(label);
+
+                appData.selectedFilters.push(filter);
+            });
+
+            console.log('build filters ',);
+        }
+
+        d3.csv("https://docs.google.com/spreadsheets/d/e/2PACX-1vQbKJ4BhctoIn6xEi22geBvVpmgZEzq6TEdzDZtc2Dgo0L2IJIW7Gy3j-EEoDZ3gFD8VemQhPs4Dc85/pub?output=csv")
+            .then(function (data) {
+                console.log(data);
+
+                const bounds = new mapboxgl.LngLatBounds();
+                const filters = []
+                const regions = []
+
+                const points = data.map(function (d) {
+
+                    const [lat, lng] = d['COORDINATES'].split(',').map(Number);
+                    filters.push(d['CATEGORY']);
+                    bounds.extend([lng, lat]);
+
+                    regions.push(d['REGION']);
+
+                    // const container = document.createElement('div');
+                    // container.className = 'marker-container';
+
+                    // const marker = document.createElement('div');
+                    // marker.className = 'marker';
+
+                    // const img = document.createElement('img');
+                    // img.src = 'img.jpg';
+                    // img.style.width = '100%';
+                    // img.style.height = '100%';
+                    // img.style.borderRadius = '50%';
+                    // img.style.objectFit = 'cover';
+                    // marker.appendChild(img);
+
+                    // const label = document.createElement('div');
+                    // label.className = 'marker-label';
+                    // label.textContent = d.NAME;
+
+                    // container.appendChild(marker);
+                    // container.appendChild(label);
+
+                    // new mapboxgl.Marker({
+                    //     element: container,
+                    //     anchor: 'center'
+                    // })
+                    //     .setLngLat([lng, lat])
+                    //     .addTo(map);
+
+                    return {
+                        type: 'Feature',
+                        geometry: {
+                            type: 'Point',
+                            coordinates: [lng, lat]
+                        },
+                        properties: {
+                            title: d.NAME,
+                            address: d.ADDRESS,
+                            category: d.CATEGORY,
+                            quote: d.QUOTE,
+                            city: d.CITY,
+                            country: d.COUNTRY,
+                            image: d['PHOTO LINK'],
+                            region: d.REGION,
+                            source: d.SOURCE,
+                            sourceLink: d['SOURCE LINK']
+
+                        }
+                    };
+                });
+
+                console.log('points', points);
+                appData.points = points;
+                appData.filters = [...new Set(filters)];
+                appData.regions = [...new Set(regions)];
+
+                buildRegions()
+                buildFilters()
+
+                if (map.getSource('points')) {
+                    map.getSource('points').setData({ type: 'FeatureCollection', features: points });
+                    // updateMapFilters();
+                }
+
+            });
+
+
+        map.on('load', () => {
+            // The style paint properties have been moved to style.load event
+
+            map.addSource('points', {
+                type: 'geojson',
+                data: {
+                    type: 'FeatureCollection',
+                    features: appData.points
+                }
+            });
+
+            map.addLayer({
+                id: 'points',
+                source: 'points',
+                type: 'circle',
+                paint: {
+                    'circle-radius': 6,
+                    //'circle-color': matchExpression,
+                    'circle-color': '#7b72bd',
+                    'circle-stroke-width': 2,
+                    'circle-stroke-color': '#fff'
+                }
+            });
+
+
+            map.on('click', 'points', (e) => {
+                const coordinates = e.features[0].geometry.coordinates.slice();
+                const { title, address, city, country, quote, image, source, sourceLink } = e.features[0].properties;
+
+                const categories = e.features[0].properties.category
+
+
+                const sourceLinkHtml = sourceLink ? `<a href="${sourceLink}" target="_blank">${source}</a>` : '';
+
+                new mapboxgl.Popup()
+                    .setLngLat(coordinates)
+                    .setHTML(`
+                    
+                    <div class="info-title">
+                        <img src="${image}" style="max-width:60px;border-radius:100%; margin-right:10px;">
+                        <h3>${title}</h3>
+                    </div>
+                    <strong>${categories}</strong>
+                    <div>${quote}</div>
+                    <p>${sourceLinkHtml}</p>
+                    
+                    `)
+                    .addTo(map);
+                // <p>${address}, ${city}, ${country}</p>
+            });
+
+            map.on('mouseenter', 'points', () => {
+                map.getCanvas().style.cursor = 'pointer';
+            });
+
+            map.on('mouseleave', 'points', () => {
+                map.getCanvas().style.cursor = '';
+            });
+
+        })
+
+    </script>
+
+</body>
+
+</html>
