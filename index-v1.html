@@ -130,11 +130,12 @@
     <script>
 
         const categoryStyles = {
-            'Hotels': { displayName: 'Hotels', color: '#ff0000' },
+            'Culture': { displayName: 'Culture', color: '#0000ff' },
             'Entertainment': { displayName: 'Entertainment', color: '#ffff00' },
             'Restaurants': { displayName: 'Restaurants', color: '#008000' },
-            'Culture': { displayName: 'Culture', color: '#0000ff' },
-            'Shopping': { displayName: 'Shopping', color: '#800080' },
+            'Hotels': { displayName: 'Hotels', color: '#ff0000' },
+            'Nature': { displayName: 'Nature', color: '#800080' },
+            'Wellness': { displayName: 'Wellness', color: '#800080' },
 
             // 'Art & Design': { displayName: 'Art & Design', color: '#ffa500' },
             // 'Wellness & Fitness': { displayName: 'Wellness & Fitness', color: '#ffc0cb' }
@@ -355,7 +356,6 @@
                     // updateMapFilters();
                 }
 
-
             });
 
 
@@ -385,7 +385,8 @@
                 type: 'circle',
                 paint: {
                     'circle-radius': 6,
-                    'circle-color': matchExpression,
+                    //'circle-color': matchExpression,
+                    'circle-color': '#7b72bd',
                     'circle-stroke-width': 2,
                     'circle-stroke-color': '#fff'
                 }
