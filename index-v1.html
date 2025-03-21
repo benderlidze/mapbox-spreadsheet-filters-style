@@ -124,14 +124,14 @@
 
     <div class="filter-container">
         <div id="filters"></div>
-        <div id="regions" class="fileter-container"></div>
+        <div id="regions" class="fileter-container" style="display:none"></div>
     </div>
 
     <script>
 
         const categoryStyles = {
             'Culture': { displayName: 'Culture', color: '#0000ff' },
-            'Entertainment': { displayName: 'Entertainment', color: '#ffff00' },
+            'Experiences': { displayName: 'Experiences', color: '#ffff00' },
             'Restaurants': { displayName: 'Restaurants', color: '#008000' },
             'Hotels': { displayName: 'Hotels', color: '#ff0000' },
             'Nature': { displayName: 'Nature', color: '#800080' },
@@ -208,7 +208,7 @@
 
         const img = document.createElement('img');
         img.src = 'logo.png';
-        img.style = 'width: 150px;padding:10px;';
+        img.style = 'width: 110px;padding:10px;';
         filtersContainer.appendChild(img);
 
         Object.entries(categoryStyles).forEach(([category, style]) => {
